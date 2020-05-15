@@ -40,6 +40,10 @@ function encodeDataFromCsvFile(path) {
 
   const fd = fs.openSync('./frames.bin', 'w');
 
+  fs.writeSync(fd, 'FRFR');
+  fs.writeSync(fd, Buffer.from(Uint8Array.from([ 0, 0, 0, 1 ]).buffer));
+  fs.writeSync(fd, Buffer.from(Uint32Array.from([ frames.length ]).buffer));
+
   frames.forEach((frame) => {
     fs.writeSync(fd, Buffer.from(Uint32Array.from([ frame.n ]).buffer));
     fs.writeSync(fd, Buffer.from(frame.data.buffer))
