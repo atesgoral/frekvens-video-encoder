@@ -13,16 +13,37 @@ function csvToArray(csv) {
 }
 
 function encodeData(array) {
+  if (array.length !== 16) {
+    throw new Error('Expected 16 rows');
+  }
+
   return Uint16Array.from(array.map((row) => {
+    if (row.length !== 16) {
+      throw new Error('Expected 16 columns');
+    }
+
     return row.reduce((acc, value, bit) => acc + (value << bit), 0);
   }));
 }
 
 function encodeDataFromCsvFile(path) {
-  const csv = loadCsvFile(path);
-  const array = csvToArray(csv);
-  const encoded = encodeData(array);
-  return encoded;
+  try {
+    const csv = loadCsvFile(path);
+    const array = csvToArray(csv);
+    const encoded = encodeData(array);
+    return encoded;
+  } catch (error) {
+    throw new Error(`Error while encoding ${path}: ${error.message}`);
+  }
+}
+
+function writeBytes(fd, typedArray) {
+  const buffer = Buffer.from(typedArray.buffer);
+  const bytesWritten = fs.writeSync(fd, buffer, 0, buffer.length, null);
+
+  if (bytesWritten !== buffer.length) {
+    throw new Error('Not enough bytes written');
+  }
 }
 
 (async () => {
@@ -40,14 +61,22 @@ function encodeDataFromCsvFile(path) {
 
   const fd = fs.openSync('./frames.bin', 'w');
 
-  fs.writeSync(fd, 'FRFR');
-  fs.writeSync(fd, Buffer.from(Uint8Array.from([ 0, 0, 0, 1 ]).buffer));
-  fs.writeSync(fd, Buffer.from(Uint32Array.from([ frames.length ]).buffer));
+  const headerArray = Uint8Array.from(Buffer.from('FRFR'));
+  const versionArray = Uint8Array.from([ 0, 0, 0, 1 ]);
+  const frameCountArray = Uint32Array.from([ frames.length ]);
 
-  frames.forEach((frame) => {
-    fs.writeSync(fd, Buffer.from(Uint32Array.from([ frame.n ]).buffer));
-    fs.writeSync(fd, Buffer.from(frame.data.buffer))
+  writeBytes(fd, headerArray);
+  writeBytes(fd, versionArray);
+  writeBytes(fd, frameCountArray);
+
+  frames.forEach((frame, i) => {
+    writeBytes(fd, Uint32Array.from([ frame.n ]));
+    writeBytes(fd, frame.data);
   });
 
   fs.closeSync(fd);
-})();
+
+  console.log(`${frames.length} frames encoded`);
+})().catch((error) => {
+  console.error(error.message);
+});
