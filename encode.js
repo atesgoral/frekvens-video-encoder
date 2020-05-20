@@ -59,7 +59,7 @@ function writeBytes(fd, typedArray) {
 
   frames.sort((a, b) => a.n - b.n);
 
-  const fd = fs.openSync('./frames.bin', 'w');
+  const fd = fs.openSync('./frames.ff', 'w');
 
   const headerArray = Uint8Array.from(Buffer.from('FRFR'));
   const versionArray = Uint8Array.from([ 0, 0, 0, 1 ]);
