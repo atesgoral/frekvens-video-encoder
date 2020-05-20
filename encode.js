@@ -69,7 +69,15 @@ function writeBytes(fd, typedArray) {
   writeBytes(fd, versionArray);
   writeBytes(fd, frameCountArray);
 
+  let prevN = null;
+
   frames.forEach((frame, i) => {
+    if (prevN !== null && frame.n - prevN > 1) {
+      console.warn(`${frame.n - prevN - 1} frames skipped before frame ${frame.n}`);
+    }
+
+    prevN = frame.n;
+
     writeBytes(fd, Uint32Array.from([ frame.n ]));
     writeBytes(fd, frame.data);
   });
